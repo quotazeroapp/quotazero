@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f7f2">
+  <meta name="description" content="QuotaZero: pianifica il tuo itinerario in bici, tappa dopo tappa.">
+  <title>QuotaZero — pianifica il tuo giro</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="preconnect" href="https://tile.openstreetmap.org">
+  <link rel="preconnect" href="https://brouter.de">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root{color-scheme:light;--ink:#17251f;--muted:#758078;--green:#167650;--lime:#d8f36a;--paper:#fff;--line:#e8ece6;--shadow:0 12px 38px #1a2c2020;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    *{box-sizing:border-box}html,body{height:100%;margin:0}body{overflow:hidden;color:var(--ink);background:#edf1ea}button{font:inherit}#map{position:absolute;inset:0;background:#e8eee8}.leaflet-container{font:inherit}.leaflet-control-attribution{font-size:10px!important;background:#ffffffd9!important}.leaflet-control-zoom{border:0!important;box-shadow:0 4px 14px #14271a20!important;border-radius:12px!important;overflow:hidden}.leaflet-control-zoom a{color:var(--ink)!important;border:0!important;width:36px!important;height:36px!important;line-height:36px!important}.leaflet-bottom{bottom:0}
+    .topbar{position:absolute;z-index:800;top:max(14px,env(safe-area-inset-top));left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;pointer-events:none}.brand,.top-actions>*{pointer-events:auto}.brand{display:flex;align-items:center;gap:10px;padding:9px 14px 9px 10px;background:#fff;border:1px solid #ffffffb8;border-radius:17px;box-shadow:var(--shadow)}.brand-mark{display:grid;place-items:center;width:34px;height:34px;color:#fff;background:var(--green);border-radius:11px}.brand-mark svg{width:20px;height:20px}.brand-copy{line-height:1.05}.brand-name{font-size:16px;font-weight:850;letter-spacing:-.7px}.brand-name span{color:var(--green)}.brand-tag{margin-top:4px;color:var(--muted);font-size:10px;font-weight:650;letter-spacing:.02em}.top-actions{display:flex;gap:8px}.icon-btn{display:grid;place-items:center;width:42px;height:42px;padding:0;color:var(--ink);background:#fff;border:1px solid #ffffffc4;border-radius:14px;box-shadow:var(--shadow);cursor:pointer}.icon-btn svg{width:19px;height:19px}.icon-btn:active,.action:active{transform:scale(.97)}
+    .hint{position:absolute;z-index:700;top:82px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:7px;max-width:calc(100% - 32px);padding:9px 13px;background:#ffffffed;border:1px solid #fff;border-radius:999px;box-shadow:0 5px 20px #12261614;color:#405047;font-size:12px;font-weight:650;white-space:nowrap;transition:opacity .25s}.hint .hint-dot{width:7px;height:7px;flex:0 0 7px;background:var(--green);border-radius:50%}.hint.hidden{opacity:0;pointer-events:none}
+    .map-switch{position:absolute;z-index:700;right:14px;bottom:250px;display:flex;gap:3px;padding:4px;background:#fff;border:1px solid #ffffffc4;border-radius:12px;box-shadow:var(--shadow)}.map-switch button{padding:7px 9px;color:#657168;background:transparent;border:0;border-radius:8px;font-size:11px;font-weight:750;cursor:pointer}.map-switch button.active{color:var(--green);background:#edf6ef}
+    .route-panel{position:absolute;z-index:800;right:0;bottom:0;left:0;padding:13px 15px calc(14px + env(safe-area-inset-bottom));background:#fff;border:1px solid #ffffffb8;border-bottom:0;border-radius:22px 22px 0 0;box-shadow:0 -10px 38px #1a2c201c}.panel-inner{max-width:780px;margin:0 auto}.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.route-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;letter-spacing:-.1px}.route-title svg{width:16px;color:var(--green)}.status{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:10px;font-weight:700}.status-dot{width:7px;height:7px;background:#bdc6be;border-radius:50%}.status.loading .status-dot{background:#e2a72b;animation:pulse 1s infinite}.status.ready .status-dot{background:#29a36a}.status.error .status-dot{background:#dc6c54}@keyframes pulse{50%{opacity:.35}}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.stat{display:flex;align-items:center;gap:11px;min-height:62px;padding:10px 13px;background:#f5f7f3;border:1px solid #eef0eb;border-radius:15px}.stat-icon{display:grid;place-items:center;width:34px;height:34px;color:var(--green);background:#e4f0e5;border-radius:11px}.stat-icon svg{width:18px;height:18px}.stat-value{font-size:20px;font-weight:850;letter-spacing:-.8px;line-height:1}.stat-value small{margin-left:3px;font-size:11px;font-weight:750;letter-spacing:0}.stat-label{margin-top:5px;color:var(--muted);font-size:10px;font-weight:700}.actions{display:grid;grid-template-columns:1fr 1.15fr;gap:9px}.action{display:flex;align-items:center;justify-content:center;gap:8px;min-height:45px;padding:0 12px;border:0;border-radius:13px;font-size:12px;font-weight:800;cursor:pointer;transition:transform .12s,opacity .12s}.action svg{width:16px;height:16px}.action.secondary{color:#405047;background:#f2f4f0}.action.primary{color:#fff;background:var(--green)}.action:disabled{opacity:.42;cursor:not-allowed}.note{margin-top:9px;min-height:14px;color:#718077;font-size:10px;text-align:center}.note.error{color:#aa4738}
+    .waypoint-icon{display:flex;justify-content:center;align-items:center;width:34px;height:42px;background:transparent;border:0}.pin{position:relative;display:grid;place-items:center;width:32px;height:32px;color:#fff;background:var(--green);border:3px solid #fff;border-radius:50% 50% 50% 8px;box-shadow:0 3px 10px #18281d55;transform:rotate(-45deg)}.pin span{font-size:11px;font-weight:850;transform:rotate(45deg)}.pin.start{background:#167650}.pin.finish{background:#dc674b}.pin.stop{background:#263e34}.leaflet-marker-draggable{cursor:grab}.leaflet-marker-draggable:active{cursor:grabbing}
+    @media(min-width:700px){.topbar{top:22px;left:24px;right:24px}.hint{top:91px}.route-panel{right:22px;bottom:22px;left:auto;width:370px;padding:17px 18px calc(16px + env(safe-area-inset-bottom));border:1px solid #ffffffc4;border-radius:22px}.map-switch{right:24px;bottom:265px}.panel-head{margin-bottom:13px}.stats{gap:9px}.stat{padding:10px}.leaflet-bottom.leaflet-left{bottom:20px}}
+    @media(max-width:370px){.brand-tag{display:none}.brand{padding-right:11px}.hint{font-size:11px}.map-switch{bottom:249px}.route-panel{padding-right:12px;padding-left:12px}.action{font-size:11px}}
+  </style>
+</head>
+<body>
+  <main aria-label="Pianificatore di percorsi ciclistici">
+    <div id="map" aria-label="Mappa interattiva: tocca per aggiungere i punti del percorso"></div>
+    <header class="topbar">
+      <div class="brand" aria-label="QuotaZero, pianifica il tuo giro">
+        <div class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m3 17 5.2-7 3.2 4 3.3-6L21 17H3Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="17.5" cy="5.5" r="1.5" fill="#d8f36a"/></svg></div>
+        <div class="brand-copy"><div class="brand-name">Quota<span>Zero</span></div><div class="brand-tag">Il tuo prossimo giro, da qui.</div></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="locateBtn" aria-label="Centra sulla mia posizione" title="La mia posizione"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg></button>
+      </div>
+    </header>
+    <div class="hint" id="hint"><span class="hint-dot"></span><span id="hintText">Tocca la mappa per aggiungere la partenza</span></div>
+    <div class="map-switch" role="group" aria-label="Stile della mappa"><button class="active" data-layer="topo">Topo</button><button data-layer="osm">Strade</button></div>
+    <section class="route-panel" aria-label="Riepilogo percorso">
+      <div class="panel-inner">
+        <div class="panel-head"><div class="route-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 0h13l-3 4 3 4H4" stroke-linecap="round" stroke-linejoin="round"/></svg>Il tuo itinerario</div><div class="status" id="status"><span class="status-dot"></span><span id="statusText">In attesa dei punti</span></div></div>
+        <div class="stats">
+          <div class="stat"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="m6 17 4-9h4l4 9m-8-9 5 9h-5m1-12h3" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="stat-value"><span id="distance">—</span><small>km</small></div><div class="stat-label">DISTANZA</div></div></div>
+          <div class="stat"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 18 6-7 4 4 4-7 4 10H3Z" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 5v4m-2-2h4" stroke-linecap="round"/></svg></div><div><div class="stat-value"><span id="elevation">—</span><small>m</small></div><div class="stat-label">DISLIVELLO POSITIVO</div></div></div>
+        </div>
+        <div class="actions"><button class="action secondary" id="undoBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-2" stroke-linecap="round" stroke-linejoin="round"/></svg>Annulla ultimo punto</button><button class="action primary" id="clearBtn" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 14h10l1-14M9 7V4h6v3" stroke-linecap="round" stroke-linejoin="round"/></svg>Cancella tutto</button></div>
+        <div class="note" id="note" aria-live="polite">La rotta viene calcolata automaticamente su strade ciclabili.</div>
+      </div>
+    </section>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    (()=>{
+      const map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([45.4642,9.19],12);
+      L.control.zoom({position:'bottomleft'}).addTo(map);
+      const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · <a href="https://opentopomap.org">OpenTopoMap</a>',subdomains:'abc'});
+      const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',subdomains:'abc'});
+      topo.addTo(map);
+      const routeLayer=L.geoJSON(null,{style:{color:'#167650',weight:5,opacity:.9,lineCap:'round',lineJoin:'round'}}).addTo(map);
+      let points=[],markers=[],requestId=0,timer=null;
+      const $=id=>document.getElementById(id);
+      function setStatus(kind,text){$('status').className='status '+kind;$('statusText').textContent=text}
+      function setNote(text,isError=false){$('note').textContent=text;$('note').classList.toggle('error',isError)}
+      function role(i){return points.length===1||i===0?'start':i===points.length-1?'finish':'stop'}
+      function roleName(i){return points.length===1||i===0?'Partenza':i===points.length-1?'Arrivo':`Tappa ${i}`}
+      function iconFor(i){const r=role(i),label=r==='start'?'P':r==='finish'?'A':String(i);return L.divIcon({className:'waypoint-icon',html:`<div class="pin ${r}"><span>${label}</span></div>`,iconSize:[34,42],iconAnchor:[17,36]})}
+      function updateHint(){const n=points.length;let text=n===0?'Tocca la mappa per aggiungere la partenza':n===1?'Aggiungi tappe: il prossimo punto sarà l’arrivo':`${n} punti · tocca per aggiungere una tappa`;if(n>1)text=`${n} punti · aggiungi tappe o trascina i marker`;$('hintText').textContent=text;$('hint').classList.toggle('hidden',n>0)}
+      function redrawMarkers(){markers.forEach(m=>map.removeLayer(m));markers=[];points.forEach((p,i)=>{const m=L.marker(p,{draggable:true,icon:iconFor(i),title:roleName(i),keyboard:true}).addTo(map);m.bindTooltip(roleName(i),{direction:'top',offset:[0,-30],opacity:.9});m.on('dragend',()=>{const ll=m.getLatLng();points[i]=[ll.lat,ll.lng];recalculate()});markers.push(m)})}
+      function distanceFallback(){let d=0;for(let i=1;i<points.length;i++)d+=map.distance(points[i-1],points[i]);return d/1000}
+      function updateButtons(){$('undoBtn').disabled=points.length===0;$('clearBtn').disabled=points.length===0}
+      function addPoint(latlng){points.push([latlng.lat,latlng.lng]);redrawMarkers();updateButtons();updateHint();$('elevation').textContent='—';if(points.length<2){routeLayer.clearLayers();$('distance').textContent='—';setStatus('','Punto aggiunto');setNote('Aggiungi almeno un altro punto per calcolare il percorso.')}else recalculate()}
+      map.on('click',e=>addPoint(e.latlng));
+      function recalculate(){clearTimeout(timer);const thisRequest=++requestId;routeLayer.clearLayers();if(points.length<2){return}setStatus('loading','Calcolo percorso…');setNote('Collegamento al router ciclistico BRouter…');timer=setTimeout(async()=>{
+        const coords=points.map(p=>`${p[1].toFixed(6)},${p[0].toFixed(6)}`).join('|');
+        const url=`https://brouter.de/brouter?lonlats=${encodeURIComponent(coords)}&profile=fastbike-lowtraffic&alternativeidx=0&format=geojson`;
+        try{const response=await fetch(url,{headers:{Accept:'application/geo+json, application/json'}});if(!response.ok)throw new Error(`BRouter ha risposto con errore (${response.status}).`);const data=await response.json();if(thisRequest!==requestId)return;
+          const feature=data.type==='FeatureCollection'?data.features?.[0]:data.type==='Feature'?data:null;if(!feature?.geometry?.coordinates?.length)throw new Error('Nessun percorso trovato: prova a spostare i punti su strade raggiungibili.');
+          routeLayer.addData(feature);const props=feature.properties||{};let meters=Number(props['track-length']??props.track_length??props.distance);if(!Number.isFinite(meters)||meters<=0){const coordsGeo=feature.geometry.coordinates;meters=0;for(let i=1;i<coordsGeo.length;i++){meters+=map.distance([coordsGeo[i-1][1],coordsGeo[i-1][0]],[coordsGeo[i][1],coordsGeo[i][0]])}}
+          $('distance').textContent=(meters/1000).toFixed(1).replace('.',',');let ascent=Number(props['filtered ascend']??props['plain-ascend']??props.ascend??props.ascent);if(!Number.isFinite(ascent)){ascent=0;const cs=feature.geometry.coordinates;for(let i=1;i<cs.length;i++)if(Number.isFinite(cs[i][2])&&Number.isFinite(cs[i-1][2]))ascent+=Math.max(0,cs[i][2]-cs[i-1][2]);if(!cs.some(c=>Number.isFinite(c[2])))ascent=NaN}
+          $('elevation').textContent=Number.isFinite(ascent)?Math.round(ascent):'—';setStatus('ready','Percorso pronto');setNote(Number.isFinite(ascent)?'Percorso stradale bici calcolato con BRouter.':'Percorso calcolato; dislivello non disponibile per questo itinerario.');const bounds=routeLayer.getBounds();if(bounds.isValid())map.fitBounds(bounds,{paddingTopLeft:[32,90],paddingBottomRight:[32,245],maxZoom:15});
+        }catch(error){if(thisRequest!==requestId)return;setStatus('error','Percorso non disponibile');$('distance').textContent=distanceFallback().toFixed(1).replace('.',',');$('elevation').textContent='—';setNote(`${error.message||'Errore di rete.'} Distanza in linea spezzata mostrata come stima.`,true)}
+      },450)}
+      $('undoBtn').addEventListener('click',()=>{if(!points.length)return;requestId++;points.pop();redrawMarkers();updateButtons();updateHint();routeLayer.clearLayers();$('distance').textContent='—';$('elevation').textContent='—';if(points.length>=2)recalculate();else{setStatus('',points.length?'Punto aggiunto':'In attesa dei punti');setNote(points.length?'Aggiungi almeno un altro punto per calcolare il percorso.':'La rotta viene calcolata automaticamente su strade ciclabili.')}});
+      $('clearBtn').addEventListener('click',()=>{requestId++;clearTimeout(timer);points=[];redrawMarkers();routeLayer.clearLayers();$('distance').textContent='—';$('elevation').textContent='—';updateButtons();updateHint();setStatus('','In attesa dei punti');setNote('La rotta viene calcolata automaticamente su strade ciclabili.')});
+      document.querySelectorAll('.map-switch button').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('.map-switch button').forEach(b=>b.classList.toggle('active',b===button));if(button.dataset.layer==='osm'){map.removeLayer(topo);osm.addTo(map)}else{map.removeLayer(osm);topo.addTo(map)}}));
+      $('locateBtn').addEventListener('click',()=>{if(!navigator.geolocation){setNote('La geolocalizzazione non è supportata da questo browser.',true);return}setNote('Ricerca della posizione…');navigator.geolocation.getCurrentPosition(pos=>{map.setView([pos.coords.latitude,pos.coords.longitude],14);setNote('Mappa centrata sulla tua posizione.')},()=>setNote('Impossibile ottenere la posizione. Controlla i permessi del browser.',true),{enableHighAccuracy:true,timeout:10000})});
+      updateButtons();updateHint();
+    })();
+  </script>
+</body>
+</html>
