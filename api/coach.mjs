@@ -80,7 +80,7 @@ export default async function handler(req, res) {
           generationConfig: {
             responseMimeType: "application/json",
             responseJsonSchema: schema,
-            maxOutputTokens: 500
+            maxOutputTokens: 1200
           }
         })
       });
@@ -103,7 +103,18 @@ export default async function handler(req, res) {
       return json(res, 502, { error: "Gemini non ha prodotto una risposta valida. Riprova." });
     }
 
-    const intent = JSON.parse(output);
+    let intent;
+    try {
+      intent = JSON.parse(output);
+    } catch (parseError) {
+      const finishReason = data.candidates?.[0]?.finishReason || "sconosciuto";
+      console.error("Gemini returned invalid JSON:", finishReason, output.slice(0, 1000));
+      return json(res, 502, {
+        error: finishReason === "MAX_TOKENS"
+          ? "La risposta di Gemini è stata interrotta. Riprova con una richiesta più breve."
+          : "Gemini ha restituito una risposta non valida. Riprova tra poco."
+      });
+    }
     if (!["route", "clarify", "chat"].includes(intent.action) || !Array.isArray(intent.via_locations)) {
       return json(res, 502, { error: "Risposta AI non valida." });
     }
