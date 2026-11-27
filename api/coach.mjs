@@ -16,6 +16,7 @@ const schema = {
 };
 
 export default async function handler(request) {
+  if (request.method === "GET") return new Response("QuotaZero Coach API attiva. Il servizio accetta richieste POST.", { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
   if (request.method !== "POST") return Response.json({ error: "Metodo non consentito." }, { status: 405, headers: { allow: "POST" } });
   const key = process.env.OPENAI_API_KEY;
   if (!key) return Response.json({ error: "Il Coach AI non è ancora configurato: manca OPENAI_API_KEY su Vercel." }, { status: 503 });
