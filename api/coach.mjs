@@ -1,5 +1,6 @@
 const schema = {
-  type: "object", additionalProperties: false,
+  type: "object",
+  additionalProperties: false,
   properties: {
     action: { type: "string", enum: ["route", "clarify", "chat"] },
     reply: { type: "string" },
@@ -15,15 +16,37 @@ const schema = {
   required: ["action", "reply", "start_location", "via_locations", "end_location", "route_type", "discipline", "target_km", "max_ascent_m", "clarification"]
 };
 
-export default async function handler(request) {
-  if (request.method === "GET") return new Response("QuotaZero Coach API attiva. Il servizio accetta richieste POST.", { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
-  if (request.method !== "POST") return Response.json({ error: "Metodo non consentito." }, { status: 405, headers: { allow: "POST" } });
+function json(res, status, data) {
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.end(JSON.stringify(data));
+}
+
+export default async function handler(req, res) {
+  if (req.method === "GET") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    return res.end("QuotaZero Coach API attiva. Il servizio accetta richieste POST.");
+  }
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "GET, POST");
+    return json(res, 405, { error: "Metodo non consentito." });
+  }
+
   const key = process.env.OPENAI_API_KEY;
-  if (!key) return Response.json({ error: "Il Coach AI non è ancora configurato: manca OPENAI_API_KEY su Vercel." }, { status: 503 });
+  if (!key) return json(res, 503, { error: "Il Coach AI non è ancora configurato: manca OPENAI_API_KEY su Vercel." });
+
   try {
-    const body = await request.json();
+    let body = req.body;
+    if (typeof body === "string") {
+      try { body = JSON.parse(body); } catch { body = {}; }
+    }
+    body = body && typeof body === "object" ? body : {};
     const message = String(body.message || "").trim().slice(0, 2000);
-    if (!message) return Response.json({ error: "Scrivi una richiesta." }, { status: 400 });
+    if (!message) return json(res, 400, { error: "Scrivi una richiesta." });
+
     const previous = body.context && typeof body.context === "object" ? JSON.stringify(body.context).slice(0, 5000) : "Nessun contesto precedente.";
     const instructions = [
       "Sei il Coach AI di QuotaZero, assistente per pianificare percorsi ciclistici in Italia. Interpreta messaggi in italiano e segui i messaggi precedenti. Rispondi esclusivamente secondo lo schema JSON.",
@@ -39,18 +62,40 @@ export default async function handler(request) {
       "Nel campo reply scrivi una frase breve e naturale in italiano. Se action=clarify, inserisci la domanda anche in clarification.",
       "Contesto percorso precedente: " + previous
     ].join("\n");
+
     const response = await fetch("https://api.openai.com/v1/responses", {
       signal: AbortSignal.timeout(25000),
       method: "POST",
       headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4o-mini", instructions, input: message, text: { format: { type: "json_schema", name: "quotazero_coach_intent", strict: true, schema } }, max_output_tokens: 500, store: false })
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        instructions,
+        input: message,
+        text: { format: { type: "json_schema", name: "quotazero_coach_intent", strict: true, schema } },
+        max_output_tokens: 500,
+        store: false
+      })
     });
+
     const data = await response.json();
-    if (!response.ok) { console.error("OpenAI API error:", response.status, data?.error?.message || "unknown"); return Response.json({ error: "Il servizio AI ha restituito un errore. Controlla la configurazione della chiave OpenAI." }, { status: 502 }); }
+    if (!response.ok) {
+      console.error("OpenAI API error:", response.status, data?.error?.message || "unknown");
+      return json(res, 502, { error: "Il servizio AI ha restituito un errore. Controlla la configurazione della chiave OpenAI." });
+    }
+
     const output = (data.output || []).flatMap(item => item.content || []).find(item => item.type === "output_text")?.text;
-    if (!output) return Response.json({ error: "Il Coach non ha prodotto una risposta valida. Riprova." }, { status: 502 });
+    if (!output) return json(res, 502, { error: "Il Coach non ha prodotto una risposta valida. Riprova." });
+
     const intent = JSON.parse(output);
-    if (!["route", "clarify", "chat"].includes(intent.action) || !Array.isArray(intent.via_locations)) return Response.json({ error: "Risposta AI non valida." }, { status: 502 });
-    return Response.json(intent, { headers: { "Cache-Control": "no-store" } });
-  } catch (error) { console.error("QuotaZero coach error:", error?.name || "", error?.message || error); const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError"; return Response.json({ error: timedOut ? "Il servizio AI sta impiegando troppo tempo. Riprova tra poco." : "Non riesco a elaborare la richiesta in questo momento." }, { status: timedOut ? 504 : 500 }); }
+    if (!["route", "clarify", "chat"].includes(intent.action) || !Array.isArray(intent.via_locations)) {
+      return json(res, 502, { error: "Risposta AI non valida." });
+    }
+    return json(res, 200, intent);
+  } catch (error) {
+    console.error("QuotaZero coach error:", error?.name || "", error?.message || error);
+    const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
+    return json(res, timedOut ? 504 : 500, {
+      error: timedOut ? "Il servizio AI sta impiegando troppo tempo. Riprova tra poco." : "Non riesco a elaborare la richiesta in questo momento."
+    });
+  }
 }
