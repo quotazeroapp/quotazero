@@ -66,35 +66,52 @@ export default async function handler(req, res) {
     const models = ["gemini-3.8-flash", "gemini-3.6-flash"];
     let response;
     let data;
-    let usedModel = models[0];
+    let lastFailure = null;
 
-    for (const model of models) {
-      usedModel = model;
-      response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
-        signal: AbortSignal.timeout(25000),
-        method: "POST",
-        headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: instructions }] },
-          contents: [{ role: "user", parts: [{ text: message }] }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseJsonSchema: schema,
-            maxOutputTokens: 1200
-          }
-        })
-      });
+    for (let i = 0; i < models.length; i++) {
+      const model = models[i];
+      try {
+        response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+          signal: AbortSignal.timeout(12000),
+          method: "POST",
+          headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: instructions }] },
+            contents: [{ role: "user", parts: [{ text: message }] }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              responseJsonSchema: schema,
+              maxOutputTokens: 1200
+            }
+          })
+        });
 
-      data = await response.json();
-      if (response.ok) break;
+        data = await response.json();
+        if (response.ok) break;
 
-      const retryable = [429, 500, 502, 503, 504].includes(response.status);
-      if (!retryable || model === models[models.length - 1]) {
+        const retryable = [429, 500, 502, 503, 504].includes(response.status);
         const detail = String(data?.error?.message || "Errore non specificato").slice(0, 500);
-        console.error("Gemini API error:", model, response.status, detail);
-        return json(res, 502, { error: "Errore Google Gemini (modello " + model + ", HTTP " + response.status + "): " + detail });
+        lastFailure = { status: response.status, message: detail };
+        if (!retryable || i === models.length - 1) {
+          console.error("Gemini API error:", model, response.status, detail);
+          return json(res, 502, { error: "Errore Google Gemini (modello " + model + ", HTTP " + response.status + "): " + detail });
+        }
+        console.warn("Gemini model unavailable; trying fallback:", model, response.status);
+      } catch (error) {
+        lastFailure = { timeout: error?.name === "TimeoutError" || error?.name === "AbortError", message: String(error?.message || error) };
+        console.warn("Gemini request failed; trying fallback:", model, lastFailure.message);
+        if (i === models.length - 1) {
+          return json(res, lastFailure.timeout ? 504 : 502, {
+            error: lastFailure.timeout
+              ? "Anche il modello Gemini di riserva è troppo lento. Riprova tra poco."
+              : "Connessione a Google Gemini non riuscita: " + lastFailure.message.slice(0, 200)
+          });
+        }
       }
-      console.warn("Gemini model temporarily unavailable; trying fallback:", model, response.status);
+    }
+
+    if (!response?.ok || !data) {
+      return json(res, 502, { error: "Google Gemini non ha restituito una risposta. Riprova tra poco." });
     }
 
     const output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
