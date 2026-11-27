@@ -63,26 +63,38 @@ export default async function handler(req, res) {
       "Contesto percorso precedente: " + previous
     ].join("\n");
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent", {
-      signal: AbortSignal.timeout(25000),
-      method: "POST",
-      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: instructions }] },
-        contents: [{ role: "user", parts: [{ text: message }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseJsonSchema: schema,
-          maxOutputTokens: 500
-        }
-      })
-    });
+    const models = ["gemini-3.8-flash", "gemini-3.6-flash"];
+    let response;
+    let data;
+    let usedModel = models[0];
 
-    const data = await response.json();
-    if (!response.ok) {
-      const detail = String(data?.error?.message || "Errore non specificato").slice(0, 500);
-      console.error("Gemini API error:", response.status, detail);
-      return json(res, 502, { error: "Errore Google Gemini (HTTP " + response.status + "): " + detail });
+    for (const model of models) {
+      usedModel = model;
+      response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+        signal: AbortSignal.timeout(25000),
+        method: "POST",
+        headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: instructions }] },
+          contents: [{ role: "user", parts: [{ text: message }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseJsonSchema: schema,
+            maxOutputTokens: 500
+          }
+        })
+      });
+
+      data = await response.json();
+      if (response.ok) break;
+
+      const retryable = [429, 500, 502, 503, 504].includes(response.status);
+      if (!retryable || model === models[models.length - 1]) {
+        const detail = String(data?.error?.message || "Errore non specificato").slice(0, 500);
+        console.error("Gemini API error:", model, response.status, detail);
+        return json(res, 502, { error: "Errore Google Gemini (modello " + model + ", HTTP " + response.status + "): " + detail });
+      }
+      console.warn("Gemini model temporarily unavailable; trying fallback:", model, response.status);
     }
 
     const output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
