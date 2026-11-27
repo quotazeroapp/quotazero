@@ -16,7 +16,7 @@
 <button class="coach-fab" id="coachOpen" type="button" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v10m-4-6a4 4 0 1 0 8 0m-12 5a8 8 0 0 0 16 0M12 19v3m-4 0h8" stroke-linecap="round"/><path d="m19 2 .7 1.8 1.8.7-1.8.7L19 7l-.7-1.8-1.8-.7 1.8-.7L19 2Z" fill="currentColor" stroke="none"/></svg>Coach AI</button>
 <div class="map-tools"><div class="layers"><button class="active" data-map="topo">Topo</button><button data-map="cycle">Bici</button><button data-map="osm">Strade</button></div></div>
 <section class="sheet"><div class="sheet-inner"><div class="details" id="details"><div class="detail-head"><div class="route-title">Dettagli del giro</div><div class="status" id="status"><span id="statusText">Aggiungi punti</span></div></div><div class="stats"><div class="stat"><div class="stat-label">DISTANZA</div><div class="stat-value"><span id="detailDistance">—</span> km</div></div><div class="stat"><div class="stat-label">DISLIVELLO</div><div class="stat-value"><span id="detailAscent">—</span> m D+</div></div><div class="stat"><div class="stat-label">SALITE</div><div class="stat-value" id="climbCount">0</div></div></div><section class="card"><div class="card-head"><b>PROFILO ALTIMETRICO</b><span class="meta" id="profileMeta">Quote BRouter</span></div><div class="chart-wrap" id="chartWrap"><canvas id="chart"></canvas><div id="chartTooltip"></div></div><div class="legend"><span>🟢 &lt;4%</span><span>🟡 4–7%</span><span>🟠 7–10%</span><span>🔴 &gt;10%</span></div></section><section class="card"><div class="card-head"><b>SALITE SIGNIFICATIVE</b><span class="meta">≥1,5 km · ≥3,5%</span></div><div id="climbList">Nessuna salita rilevata.</div></section><div class="note" id="note" aria-live="polite">Scegli una disciplina e tocca la mappa.</div></div><div class="sheet-bar"><button class="handle" id="handle" aria-label="Apri dettagli"><span class="grip"></span></button><div class="summary"><div><div class="sum-label">DISTANZA</div><div class="sum-val"><span id="distance">—</span><small> km</small></div></div><div><div class="sum-label">DISLIVELLO D+</div><div class="sum-val"><span id="ascent">—</span><small> m</small></div></div><div><div class="sum-label">PENDENZA MAX</div><div class="sum-val"><span id="maxGrade">—</span><small>%</small></div></div><button class="open-btn" id="openBtn">Apri dettagli⌄</button></div><div class="actions"><button class="action" id="undoBtn" disabled>↶ Annulla</button><button class="action" id="clearBtn" disabled>⌫ Cancella</button><button class="action" id="loopBtn" disabled>↻ Anello</button><button class="action" id="gpxBtn" disabled>↓ GPX</button></div></div></div></section>
-<div class="coach-backdrop" id="coachModal" role="dialog" aria-modal="true" aria-labelledby="coachTitle"><section class="coach"><header class="coach-head"><div><b id="coachTitle">Coach AI QuotaZero</b><div class="coach-note">Descrivi il tuo giro in italiano. Interpretazione locale e routing BRouter.</div></div><button id="coachClose" class="send" aria-label="Chiudi">×</button></header><div class="chat-log" id="chatLog"><div class="bubble">Esempio: «Giro su strada di 50 km, massimo 700 m D+, partendo da qui».</div></div><button class="coach-gpx" id="coachGpx" hidden>Scarica GPX del percorso</button><div class="chat-controls"><button class="mic" id="micBtn" aria-label="Detta la richiesta">🎙</button><textarea id="chatInput" class="chat-input" placeholder="Descrivi il giro…"></textarea><button class="send" id="sendBtn" aria-label="Invia">➤</button></div><div class="coach-note">Il Coach interpreta le richieste con regole locali; obiettivi e dislivello sono indicativi.</div></section></div>
+<div class="coach-backdrop" id="coachModal" role="dialog" aria-modal="true" aria-labelledby="coachTitle"><section class="coach"><header class="coach-head"><div><b id="coachTitle">Coach AI QuotaZero</b><div class="coach-note">Descrivi il tuo giro in italiano. AI OpenAI e calcolo del percorso con BRouter.</div></div><button id="coachClose" class="send" aria-label="Chiudi">×</button></header><div class="chat-log" id="chatLog"><div class="bubble">Esempio: «Giro su strada di 50 km, massimo 700 m D+, partendo da qui».</div></div><button class="coach-gpx" id="coachGpx" hidden>Scarica GPX del percorso</button><div class="chat-controls"><button class="mic" id="micBtn" aria-label="Detta la richiesta">🎙</button><textarea id="chatInput" class="chat-input" placeholder="Descrivi il giro…"></textarea><button class="send" id="sendBtn" aria-label="Invia">➤</button></div><div class="coach-note">Il Coach AI interpreta la richiesta; strade, distanza e dislivello vengono calcolati da BRouter.</div></section></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
 <script>
 (()=>{'use strict';const $=id=>document.getElementById(id);if(!window.L)throw Error('Leaflet non caricato: controlla la connessione o il CDN');const map=L.map('map',{zoomControl:false,preferCanvas:true,worldCopyJump:true}).setView([41.9,12.5],12);L.control.zoom({position:'bottomleft'}).addTo(map);const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,subdomains:'abc',attribution:'© OpenStreetMap contributors'}),topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,subdomains:'abc',attribution:'© OpenStreetMap · OpenTopoMap'}),cycle=L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap · CyclOSM'});let activeLayer='topo',fallback=false;topo.addTo(map);topo.on('tileerror',()=>{if(activeLayer==='topo'&&!fallback){fallback=true;map.removeLayer(topo);activeLayer='osm';osm.addTo(map);document.querySelectorAll('[data-map]').forEach(b=>b.classList.toggle('active',b.dataset.map==='osm'))}});function invalidate(){requestAnimationFrame(()=>map.invalidateSize({pan:false}))}window.addEventListener('resize',invalidate);window.addEventListener('orientationchange',()=>setTimeout(invalidate,200));setTimeout(()=>map.invalidateSize(),200);
@@ -43,56 +43,64 @@ function routePlaces(text){
  if(m){const from=cleanPlace(m[1]),to=cleanPlace(m[2]);if(from&&to)return{from,to}}
  return null
 }
-async function geocodePlace(name,bias){
- let query=name;
- if(/montelivata/i.test(query))query=query.replace(/montelivata/ig,'Monte Livata');
- const u=new URL('https://nominatim.openstreetmap.org/search');
- u.searchParams.set('format','jsonv2');
- u.searchParams.set('q',query+', Lazio, Italia');
- u.searchParams.set('limit','5');
- u.searchParams.set('countrycodes','it');
- u.searchParams.set('addressdetails','1');
- const response=await fetch(u,{headers:{'Accept-Language':'it'}});
- if(!response.ok)throw Error('Ricerca località non disponibile (HTTP '+response.status+').');
- const data=await response.json();
- if(!Array.isArray(data)||!data.length)throw Error('Non trovo la località «'+name+'». Controlla il nome e riprova.');
- const norm=s=>String(s||'').toLocaleLowerCase('it').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
- const wanted=norm(name);
- const chosen=data.find(f=>norm(f.name)===wanted)||data.find(f=>norm(f.name).includes(wanted)||wanted.includes(norm(f.name)))||data[0];
- const lat=Number(chosen.lat),lon=Number(chosen.lon);
- if(!Number.isFinite(lat)||!Number.isFinite(lon))throw Error('Coordinate non valide per «'+name+'».');
- const a=chosen.address||{};
- const label=[chosen.name,a.city||a.town||a.village||a.municipality||a.county,a.state].filter(Boolean).join(', ');
- return{point:[lat,lon],label:label||chosen.display_name||name};
+let coachContext = null;
+async function geocodePlace(name){
+  let query = String(name || '').trim();
+  const isMonteLivata = /monte\s*livata/i.test(query);
+  if (isMonteLivata) query = 'Monte Livata, Subiaco, Città metropolitana di Roma Capitale, Lazio, Italia';
+  const u = new URL('https://nominatim.openstreetmap.org/search');
+  u.searchParams.set('format','jsonv2');u.searchParams.set('q',query);u.searchParams.set('limit','8');
+  u.searchParams.set('countrycodes','it');u.searchParams.set('addressdetails','1');
+  const response = await fetch(u,{headers:{'Accept-Language':'it'}});
+  if (!response.ok) throw Error('Ricerca località non disponibile (HTTP '+response.status+').');
+  const data = await response.json();
+  if (!Array.isArray(data)||!data.length) throw Error('Non trovo la località «'+name+'».');
+  const norm=s=>String(s||'').toLocaleLowerCase('it').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const wanted=norm(isMonteLivata?'Monte Livata':name);
+  let candidates=data.filter(f=>norm(f.name)===wanted);
+  if (!candidates.length) candidates=data.filter(f=>norm(f.name).includes(wanted)||wanted.includes(norm(f.name)));
+  if (isMonteLivata) candidates=candidates.filter(f=>{
+    const a=f.address||{}, place=[a.city,a.town,a.village,a.municipality,a.county,a.suburb,a.city_district,f.display_name].join(' ').toLocaleLowerCase('it');
+    return place.includes('subiaco') && !place.includes('latina');
+  });
+  if (!candidates.length) throw Error(isMonteLivata
+    ? 'Non riesco a verificare con certezza Monte Livata presso Subiaco. Non userò risultati omonimi a Latina.'
+    : 'Non trovo un risultato sufficientemente preciso per «'+name+'». Specifica il comune o la provincia.');
+  const chosen=candidates[0],lat=Number(chosen.lat),lon=Number(chosen.lon);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))throw Error('Coordinate non valide per «'+name+'».');
+  const a=chosen.address||{},label=[chosen.name,a.city||a.town||a.village||a.municipality||a.county,a.state].filter(Boolean).join(', ');
+  return{point:[lat,lon],label:label||chosen.display_name||name};
 }
 async function coach(text){
- const q=text.toLowerCase(),n=q.match(/(\d{1,3})\s*km/);if(n)targetKm=+n[1];
- const h=q.match(/(?:massimo|max(?:imo)?|entro)\s*(\d{2,4})\s*m/);if(h)targetAscent=+h[1];
- if(/gravel|sterrat/.test(q))profileName='gravel';else if(/mtb|sentier|mountain/.test(q))profileName='mtb';else if(/strad/.test(q))profileName='fastbike-lowtraffic';
- if(/allunga/.test(q)){const v=q.match(/allunga(?: di)?\s*(\d+)/);targetKm+=v?+v[1]:10}
- if(/accorcia/.test(q)){const v=q.match(/accorcia(?: di)?\s*(\d+)/);targetKm=Math.max(5,targetKm-(v?+v[1]:10))}
- const places=routePlaces(text);
- if(places){
-  bubble('Sto cercando le coordinate reali di '+places.from+' e '+places.to+'…');
-  const origin=await geocodePlace(places.from);
-  await new Promise(resolve=>setTimeout(resolve,1100));
-  const destination=await geocodePlace(places.to,origin.point);
-  points=[origin.point,destination.point];closed=false;drawMarkers();buttons();updateHint();
+  const response=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,context:coachContext})});
+  const intent=await response.json();
+  if(!response.ok)throw Error(intent.error||'Il Coach AI non è disponibile.');
+  coachContext={start_location:intent.start_location,via_locations:intent.via_locations,end_location:intent.end_location,route_type:intent.route_type,discipline:intent.discipline,target_km:intent.target_km,max_ascent_m:intent.max_ascent_m};
+  if(intent.action==='clarify')return intent.clarification||intent.reply||'Puoi chiarire meglio la località?';
+  if(intent.action==='chat')return intent.reply||'Come posso aiutarti a pianificare il tuo giro?';
+  if(!intent.start_location)throw Error('Non ho capito da dove vuoi partire. Indicami la località di partenza.');
+  if(intent.route_type==='loop'&&!intent.via_locations.length)return intent.reply||'Per creare un anello reale, indicami almeno una località o un passo da raggiungere prima di tornare alla partenza.';
+  if(intent.route_type==='point_to_point'&&!intent.end_location)return intent.reply||'Qual è la località di arrivo?';
+  const names=[intent.start_location,...intent.via_locations];
+  if(intent.route_type==='point_to_point')names.push(intent.end_location);
+  bubble('Verifico le località sulla mappa e poi calcolo le strade ciclabili reali…');
+  const located=[];
+  for(let i=0;i<names.length;i++){if(i)await new Promise(resolve=>setTimeout(resolve,1100));located.push(await geocodePlace(names[i]));}
+  points=located.map(x=>x.point);closed=intent.route_type==='loop';
+  profileName=intent.discipline==='gravel'?'gravel':intent.discipline==='mtb'?'mtb':'fastbike-lowtraffic';
+  drawMarkers();buttons();updateHint();
+  if(closed&&points.length<2)throw Error('Per creare un anello serve almeno un punto di passaggio.');
   map.fitBounds(L.latLngBounds(points),{paddingTopLeft:[35,125],paddingBottomRight:[35,180],maxZoom:13});
-  setNote('Partenza: '+origin.label+' · Arrivo: '+destination.label+'. Calcolo del percorso stradale…');
+  setNote('Località verificate: '+located.map(x=>x.label).join(' → ')+(closed?' → ritorno alla partenza':'')+'. Calcolo del percorso…');
   calculate();
-  return'Ho individuato la partenza ('+origin.label+') e l’arrivo ('+destination.label+'). Ho impostato un percorso A→B: ora BRouter calcola il tracciato ciclabile reale. Non ho creato un anello artificiale.';
- }
- const o=points[0]||[map.getCenter().lat,map.getCenter().lng],r=Math.max(1000,targetKm*1000/6),dy=r/111320,dx=r/(111320*Math.max(.2,Math.cos(o[0]*Math.PI/180)));
- points=[[...o],[o[0]+dy,o[1]+dx],[o[0],o[1]+dx*1.3],[o[0]-dy,o[1]+dx],[o[0]-dy,o[1]-dx],[o[0],o[1]-dx],[...o]];closed=true;drawMarkers();buttons();updateHint();calculate();
- const fitness=/principiante|inizio|ripresa/.test(q)?'inizio preparazione':'non specificato';
- return'Ho impostato un anello '+(profileName==='fastbike-lowtraffic'?'su strada a basso traffico':profileName)+', circa '+targetKm+' km e target D+ '+targetAscent+' m. BRouter calcolerà la strada reale: distanza e dislivello effettivi possono variare. Per le salite, inizia a ritmo conversazionale e usa un rapporto agile; livello rilevato: '+fitness+'.'
+  return intent.reply||(closed?'Ho impostato il giro ad anello con ritorno alla partenza. BRouter sta calcolando il tracciato.':'Ho impostato il percorso da partenza ad arrivo. BRouter sta calcolando il tracciato.');
 }
 async function send(){
- const i=$('chatInput'),t=i.value.trim();if(!t)return;i.value='';bubble(t,true);$('sendBtn').disabled=true;
- try{bubble(await coach(t))}catch(err){bubble('Non sono riuscito a individuare entrambe le località: '+(err.message||'errore di geocodifica')+'. Prova a scrivere «partenza: [località], arrivo: [località]».')}
- finally{$('sendBtn').disabled=false}
-}$('sendBtn').addEventListener('click',send);$('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const rec=new SR();rec.lang='it-IT';rec.interimResults=false;rec.onresult=e=>{$('chatInput').value=e.results[0][0].transcript;send()};rec.onerror=()=>bubble('Dettatura non disponibile: scrivi la richiesta.');$('micBtn').addEventListener('click',()=>{try{rec.start()}catch(e){}})}else $('micBtn').addEventListener('click',()=>bubble('Questo browser non supporta la dettatura.'));buttons();updateHint();drawChart();setTimeout(()=>map.invalidateSize(),200)})();
+  const i=$('chatInput'),t=i.value.trim();if(!t)return;i.value='';bubble(t,true);$('sendBtn').disabled=true;
+  try{bubble(await coach(t))}catch(err){bubble('Non sono riuscito a completare la richiesta: '+(err.message||'errore imprevisto')+'.')}
+  finally{$('sendBtn').disabled=false}
+}
+$('sendBtn').addEventListener('click',send);$('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(SR){const rec=new SR();rec.lang='it-IT';rec.interimResults=false;rec.onresult=e=>{$('chatInput').value=e.results[0][0].transcript;send()};rec.onerror=()=>bubble('Dettatura non disponibile: scrivi la richiesta.');$('micBtn').addEventListener('click',()=>{try{rec.start()}catch(e){}})}else $('micBtn').addEventListener('click',()=>bubble('Questo browser non supporta la dettatura.'));buttons();updateHint();drawChart();setTimeout(()=>map.invalidateSize(),200)})();
 </script>
 </body>
 </html>
