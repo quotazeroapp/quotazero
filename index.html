@@ -75,6 +75,7 @@ async function coach(text){
  if(places){
   bubble('Sto cercando le coordinate reali di '+places.from+' e '+places.to+'…');
   const origin=await geocodePlace(places.from);
+  await new Promise(resolve=>setTimeout(resolve,1100));
   const destination=await geocodePlace(places.to,origin.point);
   points=[origin.point,destination.point];closed=false;drawMarkers();buttons();updateHint();
   map.fitBounds(L.latLngBounds(points),{paddingTopLeft:[35,125],paddingBottomRight:[35,180],maxZoom:13});
