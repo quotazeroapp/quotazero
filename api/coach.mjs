@@ -3,14 +3,14 @@ const schema = {
   properties: {
     action: { type: "string", enum: ["route", "clarify", "chat"] },
     reply: { type: "string" },
-    start_location: { type: ["string", "null"] },
+    start_location: { anyOf: [{ type: "string" }, { type: "null" }] },
     via_locations: { type: "array", items: { type: "string" } },
-    end_location: { type: ["string", "null"] },
+    end_location: { anyOf: [{ type: "string" }, { type: "null" }] },
     route_type: { type: "string", enum: ["loop", "point_to_point", "none"] },
     discipline: { type: "string", enum: ["road", "gravel", "mtb"] },
-    target_km: { type: ["number", "null"] },
-    max_ascent_m: { type: ["number", "null"] },
-    clarification: { type: ["string", "null"] }
+    target_km: { anyOf: [{ type: "number" }, { type: "null" }] },
+    max_ascent_m: { anyOf: [{ type: "number" }, { type: "null" }] },
+    clarification: { anyOf: [{ type: "string" }, { type: "null" }] }
   },
   required: ["action", "reply", "start_location", "via_locations", "end_location", "route_type", "discipline", "target_km", "max_ascent_m", "clarification"]
 };
