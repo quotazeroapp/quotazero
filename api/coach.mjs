@@ -111,8 +111,11 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error("QuotaZero Gemini error:", error?.name || "", error?.message || error);
     const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
+    const detail = String(error?.message || "Errore senza dettagli").slice(0, 300);
     return json(res, timedOut ? 504 : 500, {
-      error: timedOut ? "Google Gemini sta impiegando troppo tempo. Riprova tra poco." : "Non riesco a elaborare la richiesta in questo momento."
+      error: timedOut
+        ? "Google Gemini sta impiegando troppo tempo. Riprova tra poco."
+        : "Errore interno QuotaZero (" + String(error?.name || "Error") + "): " + detail
     });
   }
 }
