@@ -80,8 +80,9 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     if (!response.ok) {
-      console.error("Gemini API error:", response.status, data?.error?.message || "unknown");
-      return json(res, 502, { error: "Google Gemini ha restituito un errore. Controlla la chiave e i limiti gratuiti di Google AI Studio." });
+      const detail = String(data?.error?.message || "Errore non specificato").slice(0, 500);
+      console.error("Gemini API error:", response.status, detail);
+      return json(res, 502, { error: "Errore Google Gemini (HTTP " + response.status + "): " + detail });
     }
 
     const output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
