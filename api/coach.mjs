@@ -28,15 +28,15 @@ export default async function handler(req, res) {
     res.statusCode = 200;
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
-    return res.end("QuotaZero Coach API attiva. Il servizio accetta richieste POST.");
+    return res.end("QuotaZero Coach API attiva con Google Gemini. Il servizio accetta richieste POST.");
   }
   if (req.method !== "POST") {
     res.setHeader("Allow", "GET, POST");
     return json(res, 405, { error: "Metodo non consentito." });
   }
 
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) return json(res, 503, { error: "Il Coach AI non è ancora configurato: manca OPENAI_API_KEY su Vercel." });
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return json(res, 503, { error: "Manca GEMINI_API_KEY nelle variabili ambiente di Vercel." });
 
   try {
     let body = req.body;
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
 
     const previous = body.context && typeof body.context === "object" ? JSON.stringify(body.context).slice(0, 5000) : "Nessun contesto precedente.";
     const instructions = [
-      "Sei il Coach AI di QuotaZero, assistente per pianificare percorsi ciclistici in Italia. Interpreta messaggi in italiano e segui i messaggi precedenti. Rispondi esclusivamente secondo lo schema JSON.",
+      "Sei il Coach AI di QuotaZero, assistente per pianificare percorsi ciclistici in Italia. Interpreta messaggi in italiano e segui i messaggi precedenti. Rispondi esclusivamente secondo lo schema JSON richiesto.",
       "Non inventare coordinate, strade, distanze o dislivelli: il tracciato sarà calcolato da un motore cartografico separato.",
       "Se l’utente corregge una località, aggiorna il contesto mantenendo partenza, disciplina e vincoli già validi.",
       "Fondamentale: «giro ad anello da A a B» significa partenza da A, passaggio/waypoint B e ritorno ad A: route_type=loop, start_location=A, via_locations=[B], end_location=null.",
@@ -63,28 +63,32 @@ export default async function handler(req, res) {
       "Contesto percorso precedente: " + previous
     ].join("\n");
 
-    const response = await fetch("https://api.openai.com/v1/responses", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
       signal: AbortSignal.timeout(25000),
       method: "POST",
-      headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
+      headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-        instructions,
-        input: message,
-        text: { format: { type: "json_schema", name: "quotazero_coach_intent", strict: true, schema } },
-        max_output_tokens: 500,
-        store: false
+        systemInstruction: { parts: [{ text: instructions }] },
+        contents: [{ role: "user", parts: [{ text: message }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseJsonSchema: schema,
+          maxOutputTokens: 500
+        }
       })
     });
 
     const data = await response.json();
     if (!response.ok) {
-      console.error("OpenAI API error:", response.status, data?.error?.message || "unknown");
-      return json(res, 502, { error: "Il servizio AI ha restituito un errore. Controlla la configurazione della chiave OpenAI." });
+      console.error("Gemini API error:", response.status, data?.error?.message || "unknown");
+      return json(res, 502, { error: "Google Gemini ha restituito un errore. Controlla la chiave e i limiti gratuiti di Google AI Studio." });
     }
 
-    const output = (data.output || []).flatMap(item => item.content || []).find(item => item.type === "output_text")?.text;
-    if (!output) return json(res, 502, { error: "Il Coach non ha prodotto una risposta valida. Riprova." });
+    const output = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
+    if (!output) {
+      console.error("Gemini returned no text:", JSON.stringify(data.promptFeedback || data.candidates?.[0]?.finishReason || {}));
+      return json(res, 502, { error: "Gemini non ha prodotto una risposta valida. Riprova." });
+    }
 
     const intent = JSON.parse(output);
     if (!["route", "clarify", "chat"].includes(intent.action) || !Array.isArray(intent.via_locations)) {
@@ -92,10 +96,10 @@ export default async function handler(req, res) {
     }
     return json(res, 200, intent);
   } catch (error) {
-    console.error("QuotaZero coach error:", error?.name || "", error?.message || error);
+    console.error("QuotaZero Gemini error:", error?.name || "", error?.message || error);
     const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
     return json(res, timedOut ? 504 : 500, {
-      error: timedOut ? "Il servizio AI sta impiegando troppo tempo. Riprova tra poco." : "Non riesco a elaborare la richiesta in questo momento."
+      error: timedOut ? "Google Gemini sta impiegando troppo tempo. Riprova tra poco." : "Non riesco a elaborare la richiesta in questo momento."
     });
   }
 }
