@@ -40,6 +40,7 @@ export default async function handler(request) {
       "Contesto percorso precedente: " + previous
     ].join("\n");
     const response = await fetch("https://api.openai.com/v1/responses", {
+      signal: AbortSignal.timeout(25000),
       method: "POST",
       headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
       body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-4o-mini", instructions, input: message, text: { format: { type: "json_schema", name: "quotazero_coach_intent", strict: true, schema } }, max_output_tokens: 500, store: false })
@@ -51,5 +52,5 @@ export default async function handler(request) {
     const intent = JSON.parse(output);
     if (!["route", "clarify", "chat"].includes(intent.action) || !Array.isArray(intent.via_locations)) return Response.json({ error: "Risposta AI non valida." }, { status: 502 });
     return Response.json(intent, { headers: { "Cache-Control": "no-store" } });
-  } catch (error) { console.error("QuotaZero coach error:", error?.message || error); return Response.json({ error: "Non riesco a elaborare la richiesta in questo momento." }, { status: 500 }); }
+  } catch (error) { console.error("QuotaZero coach error:", error?.name || "", error?.message || error); const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError"; return Response.json({ error: timedOut ? "Il servizio AI sta impiegando troppo tempo. Riprova tra poco." : "Non riesco a elaborare la richiesta in questo momento." }, { status: timedOut ? 504 : 500 }); }
 }
